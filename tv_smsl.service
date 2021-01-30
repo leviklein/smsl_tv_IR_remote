@@ -1,0 +1,14 @@
+[Unit]
+Description=TV-Amplifier Control daemon
+After=pigpiod.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+ExecStart=/usr/bin/python3 /usr/local/bin/tv_smsl.py | /usr/bin/systemd-cat -ttrue-service
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
