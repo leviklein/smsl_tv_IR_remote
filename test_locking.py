@@ -9,6 +9,6 @@ fcntl.lockf(f, fcntl.LOCK_EX)
 
 print("lock acquired!")
 
-time.sleep(5)
 
 print("done!")
+time.sleep(5)
