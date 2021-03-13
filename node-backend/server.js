@@ -122,7 +122,8 @@ function volume_change(count) {
 }
 
 async function run_python_script(arg_list) {
-  await python_mutex.runExclusive(async () => {
+  const release = await python_mutex.acquire();
+  try {
     let options = {
       mode: 'text',
       pythonOptions: ['-u'], // get print results in real-time
@@ -132,10 +133,19 @@ async function run_python_script(arg_list) {
 
     // console.log("script placeholder");
     // console.log(arg_list);
-    PythonShell.run('irrp.py', options, function (err) {
+    // console.log("script start - %s", Date.now())
+
+    let shell = new PythonShell('irrp.py', options, function (err) {
       if (err) throw err;
     });
-  });
+
+    shell.on('close', function() {
+      // console.log("script close - %s", Date.now())
+      release();
+    });
+  } finally {
+    // console.log("done!")
+  }
 }
 
 const client = net.createConnection({ host: HOST, port: PORT, family: 'IPv4' }, () => {
