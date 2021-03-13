@@ -31,7 +31,7 @@ async function get_data(key) {
 
 async function set_data(key, value) {
   await storage.setItem(key, value);
-  console.log('setting %s to %s', key, value);
+  // console.log('DB - setting %s to %s', key, value);
 }
 
 function process_tv_message(data) {
@@ -44,7 +44,7 @@ function process_tv_message(data) {
   else if (data.includes('SNAMUT')) {
     process_mute_message(data);
   }
-  else if (data.includes('SNPOWR')) {
+  else if (data.includes('SNPOWR') || data.includes('SAPOWR')) {
     process_power_message(data);
   }
 }
@@ -105,10 +105,9 @@ async function power_change(power_state) {
 }
 
 function volume_change(count) {
-  console.log("Volume change, %s", count)
+  // console.log("Volume change, %s", count)
 
   let command_list = []
-
   if(count > 0)
     command_list = BASE_COMMAND.concat(repeatElement("key_up", count))
   else if(count < 0) 
@@ -148,7 +147,10 @@ async function run_python_script(arg_list) {
   }
 }
 
-const client = net.createConnection({ host: HOST, port: PORT, family: 'IPv4' }, () => {
+const client = net.createConnection({ host: HOST, port: PORT, family: 'IPv4' });
+client.setKeepAlive(true, 1000*60*2);
+
+client.on('connect', (data) => {
   console.log('connected to server!');
   client.write(PING_MSG);
 });
@@ -158,5 +160,12 @@ client.on('data', (data) => {
 });
 
 client.on('end', () => {
-  console.log('disconnected from server');
+  console.log('disconnected from server. reconnecting..');
+  setTimeout(10000, function() {
+    client.connect();
+  });
 });
+
+setTimeout(() => {
+    client.write(PING_MSG);
+  }, 1000*60*5);
