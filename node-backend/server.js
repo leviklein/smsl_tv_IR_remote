@@ -10,6 +10,8 @@ const PORT = 20060
 const PING_MSG = '*SEPOWR################\n'
 const BASE_COMMAND = ['/usr/local/bin/irrp.py', '-p', '-g', '17', '-f', '/etc/tv_smsl/smsl_ir_codes']
 
+const repeatElement = (element, count) =>
+    Array(count).fill(element)
 
 async function init_db() {
   await storage.init( /* options ... */ );
@@ -21,23 +23,16 @@ async function init_db() {
 
 init_db();
 
-async function get_data() {
-  const res = await storage.getItem('volume');
+async function get_data(key) {
+  const res = await storage.getItem(key);
   return res
 }
 
-async function set_data(volume) {
-    // ...
-    await storage.setItem('volume',volume);
-    console.log(volume)
+async function set_data(key, value) {
+    await storage.setItem(key, value);
+    console.log(value)
 }
 
-async function set_volume() {
-  await mutex.runExclusive(async () => {
-    data = await get_data();
-    set_data(data+5);
-  });
-}
 
 
 function process_tv_message(data) {
@@ -48,8 +43,11 @@ function process_tv_message(data) {
   // console.log('finished');
   // });
 
-  if (data.includes('SNVOLU')) {
+  data = data.trim();
+  console.log(data);
 
+  if (data.includes('SNVOLU')) {
+    process_volume_message(data);
   }
   else if  (data.includes('SNAMUT')) {
 
@@ -59,12 +57,34 @@ function process_tv_message(data) {
   }
 }
 
-function volume_change(data) {
+async function process_volume_message(data) {
+  await mutex.runExclusive(async () => {
+    const db_volume = await get_data('volume');
+    const tv_volume = parseInt(data.slice(-3));
+    let new_volume = Math.floor(tv_volume / 2);
+    let delta = new_volume - db_volume;
+
+    console.log("TV volume: %s, amp_volume: %s", tv_volume, new_volume);
+
+    volume_change(delta)
+
+    set_data('volume', new_volume)
+  });
+}
+
+function volume_change(count) {
   console.log("Volume change!")
 
-  tv_volume = int(data[-3:])
-  new_volume = tv_volume // 2 # max 50 only
-  delta_volume = new_volume - status["volume"]
+  let command_list = []
+
+  if(count > 0)
+    command_list = BASE_COMMAND.concat(repeatElement("key_up", count))
+  else if(count < 0) 
+    command_list = BASE_COMMAND.concat(repeatElement("key_down", Math.abs(count)))
+  else
+    return
+    
+  console.log(command_list);
 
 }
 
@@ -74,7 +94,6 @@ const client = net.createConnection({ host: HOST, port: PORT, family: 'IPv4' }, 
 });
 
 client.on('data', (data) => {
-  console.log(data.toString());
   process_tv_message(data.toString());
 });
 
