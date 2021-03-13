@@ -1,6 +1,8 @@
 import struct, fcntl, os, time
 
-f = open("testlockfile", "w")
+LOCKFILE = '/var/lock/irrp'
+
+f = open(LOCKFILE, "w")
 
 print("acquiring lock!")
 
