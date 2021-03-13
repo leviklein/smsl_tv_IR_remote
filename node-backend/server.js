@@ -120,7 +120,6 @@ function volume_change(count) {
 function run_python_script(arg_list) {
   let options = {
     mode: 'text',
-    pythonPath: 'path/to/python',
     pythonOptions: ['-u'], // get print results in real-time
     scriptPath: '/usr/local/bin',
     args: arg_list
