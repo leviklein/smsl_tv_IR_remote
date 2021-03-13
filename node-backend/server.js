@@ -92,8 +92,9 @@ async function power_change(power_state) {
   await set_data('powered_on', power_state);
   
   if(power_state) {
-    console.log('Power on')
+    console.log('Powering on..')
     await new Promise(r => setTimeout(r, 3000));
+    console.log('Powered on')
   }
   else {
     console.log('Power off')
