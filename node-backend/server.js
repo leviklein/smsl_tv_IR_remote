@@ -4,6 +4,7 @@ const storage = require('node-persist');
 var Mutex = require('async-mutex').Mutex;
 
 const mutex = new Mutex();
+const python_mutex = new Mutex();
 
 const HOST = '192.168.20.241'
 const PORT = 20060 
@@ -87,7 +88,7 @@ async function process_power_message(data) {
 
 async function power_change(power_state) {
   command_list = BASE_COMMAND.concat(["key_power"])
-  await run_python_script(command_list);
+  run_python_script(command_list);
   
   await set_data('powered_on', power_state);
   
@@ -101,7 +102,7 @@ async function power_change(power_state) {
   }
 }
 
-async function volume_change(count) {
+function volume_change(count) {
   console.log("Volume change, %s", count)
 
   let command_list = []
@@ -115,20 +116,20 @@ async function volume_change(count) {
     
   // console.log(command_list);
 
-  await run_python_script(command_list);
+  run_python_script(command_list);
 }
 
-function run_python_script(arg_list) {
-  let options = {
-    mode: 'text',
-    pythonOptions: ['-u'], // get print results in real-time
-    scriptPath: '/usr/local/bin',
-    args: arg_list
-  };
+async function run_python_script(arg_list) {
+  await python_mutex.runExclusive(async () => {
+    let options = {
+      mode: 'text',
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: '/usr/local/bin',
+      args: arg_list
+    };
 
-  // console.log("script placeholder");
-  // console.log(arg_list);
-  return new Promise(resolve => {
+    // console.log("script placeholder");
+    // console.log(arg_list);
     PythonShell.run('irrp.py', options, function (err) {
       if (err) throw err;
     });
