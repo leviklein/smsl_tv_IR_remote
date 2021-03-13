@@ -67,6 +67,8 @@ import fcntl
 LOCKFILE = '/var/lock/irrp'
 
 f = open(LOCKFILE, "w")
+print("acquiring lock!")
+fcntl.lockf(f, fcntl.LOCK_EX)
 print("lock acquired!")
 
 
