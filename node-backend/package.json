@@ -1,0 +1,22 @@
+{
+  "name": "smsl_tv_ir_remote",
+  "version": "1.0.0",
+  "description": "For controlling smsl remote via IR",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leviklein/smsl_tv_IR_remote.git"
+  },
+  "author": "Levi Klein Marifosque",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/leviklein/smsl_tv_IR_remote/issues"
+  },
+  "homepage": "https://github.com/leviklein/smsl_tv_IR_remote#readme",
+  "dependencies": {
+    "promise-socket": "^7.0.0"
+  }
+}
