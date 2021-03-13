@@ -63,16 +63,18 @@ async function process_volume_message(data) {
   });
 }
 
-function process_mute_message(data) {
-  const mute = parseInt(data.slice(-1));
+async function process_mute_message(data) {
+  await mutex.runExclusive(async () => {
+    const mute = parseInt(data.slice(-1));
 
-  if(mute) {
-    console.log("Mute")
-    volume_change(-5)
-  }
-  else {
-    console.log("Unmute")
-  }
+    if(mute) {
+      console.log("Mute")
+      volume_change(-5)
+    }
+    else {
+      console.log("Unmute")
+    }
+  });
 }
 
 async function process_power_message(data) {
