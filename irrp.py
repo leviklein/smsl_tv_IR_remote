@@ -64,7 +64,7 @@ import pigpio # http://abyz.co.uk/rpi/pigpio/python.html
 
 import fcntl
 
-LOCKFILE = /var/lock/irrp
+LOCKFILE = '/var/lock/irrp'
 
 f = open(LOCKFILE, "w")
 print("lock acquired!")
