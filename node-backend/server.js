@@ -87,7 +87,7 @@ async function process_power_message(data) {
 
 async function power_change(power_state) {
   command_list = BASE_COMMAND.concat(["key_power"])
-  run_python_script(command_list);
+  await run_python_script(command_list);
   
   await set_data('powered_on', power_state);
   
@@ -101,7 +101,7 @@ async function power_change(power_state) {
   }
 }
 
-function volume_change(count) {
+async function volume_change(count) {
   console.log("Volume change, %s", count)
 
   let command_list = []
@@ -115,7 +115,7 @@ function volume_change(count) {
     
   // console.log(command_list);
 
-  run_python_script(command_list);
+  await run_python_script(command_list);
 }
 
 function run_python_script(arg_list) {
@@ -128,8 +128,10 @@ function run_python_script(arg_list) {
 
   // console.log("script placeholder");
   // console.log(arg_list);
-  PythonShell.run('irrp.py', options, function (err) {
-    if (err) throw err;
+  return new Promise(resolve => {
+    PythonShell.run('irrp.py', options, function (err) {
+      if (err) throw err;
+    });
   });
 }
 
