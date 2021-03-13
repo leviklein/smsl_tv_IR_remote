@@ -1,7 +1,7 @@
 const net = require('net');
 let {PythonShell} = require('python-shell');
 const storage = require('node-persist');
-var Mutex = require('async-mutex').Mutex;
+const Mutex = require('async-mutex').Mutex;
 
 const mutex = new Mutex();
 const python_mutex = new Mutex();
@@ -21,8 +21,6 @@ async function init_db() {
     await storage.setItem('volume', 0);
   }
 }
-
-init_db();
 
 async function get_data(key) {
   const res = await storage.getItem(key);
@@ -106,7 +104,6 @@ async function power_change(power_state) {
 
 function volume_change(count) {
   // console.log("Volume change, %s", count)
-
   let command_list = []
   if(count > 0)
     command_list = BASE_COMMAND.concat(repeatElement("key_up", count))
@@ -116,7 +113,6 @@ function volume_change(count) {
     return
     
   // console.log(command_list);
-
   run_python_script(command_list);
 }
 
@@ -147,6 +143,8 @@ async function run_python_script(arg_list) {
   }
 }
 
+init_db();
+
 const client = net.createConnection({ host: HOST, port: PORT, family: 'IPv4' });
 client.setKeepAlive(true, 1000*60*2);
 
@@ -166,6 +164,10 @@ client.on('end', () => {
   });
 });
 
-setTimeout(() => {
+setInterval(() => {
     client.write(PING_MSG);
   }, 1000*60*5);
+
+exports.power_change = power_change;
+exports.volume_change = volume_change;
+exports.get_db_data = get_data;
