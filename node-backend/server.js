@@ -225,15 +225,21 @@ app.get('/api/volume/down', async (req, res) => {
   res.sendStatus(204);
 });
 
-app.get('/api/power', async (req, res) => {
+app.get('/api/power/toggle', async (req, res) => {
   let power = await get_data('powered_on');
   if(power) {
     console.log("Manually turning off amplifier");
     MANUAL_TURNOFF = true;
     power_change(!power);
-    res.sendStatus(204);
   }
+  res.sendStatus(204);
 });
+
+app.get('/api/power', async (req, res) => {
+  result = await get_data('powered_on')
+  res.send(result.toString());
+});
+
 
 app.get('/api/power/on', (req, res) => {
     power_change(true);
@@ -241,9 +247,13 @@ app.get('/api/power/on', (req, res) => {
 });
 
 app.get('/api/power/off', (req, res) => {
+  console.log("Manually turning off amplifier");
+  MANUAL_TURNOFF = true;
   power_change(false);
   res.sendStatus(204);
 });
+
+
 
 app.use(express.static('html'))
 
