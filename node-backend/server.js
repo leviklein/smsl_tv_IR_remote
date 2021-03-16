@@ -229,6 +229,7 @@ app.get('/api/power', async (req, res) => {
   let power = await get_data('powered_on');
   if(power) {
     console.log("Manually turning off amplifier");
+    MANUAL_TURNOFF = true;
     power_change(!power);
     res.sendStatus(204);
   }
