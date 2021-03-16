@@ -7,12 +7,13 @@ require('log-timestamp');
 const mutex = new Mutex();
 const python_mutex = new Mutex();
 
-const HOST = '192.168.20.241'
-const PORT = 20060 
-const PING_MSG = '*SEPOWR################\n'
-const BASE_COMMAND = ['-p', '--gap', '105', '-g', '17', '-f', '/etc/tv_smsl/smsl_ir_codes']
+const HOST = '192.168.20.241';
+const PORT = 20060;
+const PING_MSG = '*SEPOWR################\n';
+const BASE_COMMAND = ['-p', '--gap', '105', '-g', '17', '-f', '/etc/tv_smsl/smsl_ir_codes'];
 
-var NO_PYTHON = false
+var NO_PYTHON = false;
+var MANUAL_TURNOFF = false;
 
 const repeatElement = (element, count) =>
     Array(count).fill(element)
@@ -29,9 +30,13 @@ if (myArgs.length > 2) {
 
 async function init_db() {
   await storage.init( /* options ... */ );
-  let value = await storage.getItem('volume');
-  if(value == null) {
+  let volume = await storage.getItem('volume');
+  if(volume == null) {
     await storage.setItem('volume', 0);
+  }
+  let powered_on = await storage.getItem('powered_on');
+  if(powered_on == null) {
+    await storage.setItem('powered_on', false);
   }
 }
 
@@ -93,8 +98,15 @@ async function process_power_message(data) {
     const amp_power_state = await get_data('powered_on');
     const tv_power_state = parseInt(data.slice(-1));
 
-    if (tv_power_state != amp_power_state) {
-      power_change(tv_power_state);
+    if(MANUAL_TURNOFF == true) {
+      if(data.includes('SNPOWR') && tv_power_state == 0){
+        MANUAL_TURNOFF = false;
+      }
+    }
+    else {
+      if(tv_power_state != amp_power_state) {
+        power_change(!amp_power_state);
+      }
     }
   });
 }
@@ -196,10 +208,34 @@ const path = require('path');
 const app = express()
 const port = 3000
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname+'/html/index.html'));
-})
+app.get('/api/volume', async (req, res) => {
+  result = await get_data('volume')
+  res.send(result.toString());
+});
+
+app.get('/api/volume/up', async (req, res) => {
+    console.log("Manually increase amplifier volume");
+    volume_change(1);
+  res.sendStatus(204);
+});
+
+app.get('/api/volume/down', async (req, res) => {
+    console.log("Manually decrease amplifier volume");
+    volume_change(-1);
+  res.sendStatus(204);
+});
+
+app.get('/api/power', async (req, res) => {
+  let power = await get_data('powered_on');
+  if(power) {
+    console.log("Manually turning off amplifier");
+    power_change(!power);
+    res.sendStatus(204);
+  }
+});
+
+app.use(express.static('html'))
 
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`)
+  console.log(`App listening at http://localhost:${port}`)
 })
