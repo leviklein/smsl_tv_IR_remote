@@ -2,6 +2,7 @@ const net = require('net');
 let {PythonShell} = require('python-shell');
 const storage = require('node-persist');
 const Mutex = require('async-mutex').Mutex;
+require('log-timestamp');
 
 const mutex = new Mutex();
 const python_mutex = new Mutex();
@@ -158,8 +159,8 @@ client.on('data', (data) => {
 });
 
 client.on('end', () => {
-  console.log('disconnected from server. reconnecting..');
   setTimeout(10000, function() {
+    console.warn('disconnected from server. reconnecting..');
     client.connect();
   });
 });

@@ -18,6 +18,7 @@
   "homepage": "https://github.com/leviklein/smsl_tv_IR_remote#readme",
   "dependencies": {
     "async-mutex": "^0.3.1",
+    "log-timestamp": "^0.3.0",
     "node-persist": "^3.1.0",
     "promise-socket": "^7.0.0",
     "python-shell": "^2.0.3"
