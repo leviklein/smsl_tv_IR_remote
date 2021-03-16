@@ -12,8 +12,20 @@ const PORT = 20060
 const PING_MSG = '*SEPOWR################\n'
 const BASE_COMMAND = ['-p', '--gap', '105', '-g', '17', '-f', '/etc/tv_smsl/smsl_ir_codes']
 
+var NO_PYTHON = false
+
 const repeatElement = (element, count) =>
     Array(count).fill(element)
+
+var myArgs = process.argv
+if (myArgs.length > 2) {
+  var extra_args = myArgs.slice(2);
+  console.log('myArgs: ', extra_args);
+  
+  if(extra_args.includes('debug')) {
+    NO_PYTHON = true 
+  }
+}
 
 async function init_db() {
   await storage.init( /* options ... */ );
@@ -127,18 +139,21 @@ async function run_python_script(arg_list) {
       args: arg_list
     };
 
-    // console.log("script placeholder");
-    // console.log(arg_list);
-    // console.log("script start - %s", Date.now())
-
-    let shell = new PythonShell('irrp.py', options, function (err) {
-      if (err) throw err;
-    });
-
-    shell.on('close', function() {
-      // console.log("script close - %s", Date.now())
+    if (NO_PYTHON == true) {
+      console.log("script placeholder. start");
+      console.log(arg_list);
       release();
-    });
+      console.log("script placeholder. end");
+    }
+    else {
+      let shell = new PythonShell('irrp.py', options, function (err) {
+        if (err) throw err;
+      });
+  
+      shell.on('close', function() {
+        release();
+      });
+    }
   } finally {
     // console.log("done!")
   }
@@ -169,6 +184,22 @@ setInterval(() => {
     client.write(PING_MSG);
   }, 1000*60*5);
 
-exports.power_change = power_change;
-exports.volume_change = volume_change;
-exports.get_db_data = get_data;
+// exports.power_change = power_change;
+// exports.volume_change = volume_change;
+// exports.get_db_data = get_data;
+
+
+
+const express = require('express')
+const path = require('path');
+
+const app = express()
+const port = 3000
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname+'/html/index.html'));
+})
+
+app.listen(port, () => {
+  console.log(`Example app listening at http://localhost:${port}`)
+})

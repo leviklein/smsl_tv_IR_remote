@@ -12,5 +12,7 @@ sudo chmod u+x /usr/local/bin/irrp.py
 # sudo systemctl enable tv_smsl.service
 # sudo systemctl restart tv_smsl.service
 
+npm install
+
 echo 
 echo "Done configuring!"
