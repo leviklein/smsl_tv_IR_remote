@@ -235,6 +235,16 @@ app.get('/api/power', async (req, res) => {
   }
 });
 
+app.get('/api/power/on', (req, res) => {
+    power_change(true);
+    res.sendStatus(204);
+});
+
+app.get('/api/power/off', (req, res) => {
+  power_change(false);
+  res.sendStatus(204);
+});
+
 app.use(express.static('html'))
 
 app.listen(port, () => {
