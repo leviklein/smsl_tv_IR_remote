@@ -128,31 +128,7 @@
 
     <script>
         var volume;
-        var power; 
-
-        function update_volume_text() {
-            $.get('api/volume').done( function(data) {
-                    volume = data;
-                    console.log(volume);
-                    $( ".volume_message" ).text(`Volume level: ${volume}`);
-                }
-            );
-        }
-
-        function update_power_text() {
-            $.get('api/power').done( function(data) {
-                    if (data) 
-                        power = 'ON';
-                    else
-                        power = 'OFF';
-                    console.log(power);
-                    $( ".power_message" ).text(`Power state: ${power}`);
-                }
-            );
-        }
-
-        update_volume_text();
-        update_power_text();
+        var power;
 
         $( ".power_up" ).on("click", function () {
             update_power_text();
@@ -162,6 +138,67 @@
             update_volume_text();
         });
 
+    </script>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+
+        var volume;
+        var power; 
+        var intervalSeconds = 30;
+
+        function save_volume(val) {
+            volume = val
+        }
+
+        function save_power(val) {
+            val = val.toString();
+            if (val == 'true') 
+                power = 'ON';
+            else
+                power = 'OFF';
+        }
+
+        async function update_volume_text(val) {
+            if (val) {
+                save_volume(val)
+            }
+            else {
+                await $.get('api/volume').done( function(data) {
+                    save_volume(data)
+                });
+            }
+            console.log(volume);
+            $( ".volume_message" ).text(`Volume level: ${volume}`);
+        }
+
+        async function update_power_text(val) {
+            if (val) {
+                save_power(val);
+            }
+            else {
+                await $.get('api/power').done( function(data) {
+                    save_power(data);
+                });
+            }
+            console.log(power);
+            $( ".power_message" ).text(`Power state: ${power}`);
+        }
+        
+        update_volume_text();
+        update_power_text();
+
+        setInterval(update_power_text, 1000*intervalSeconds);
+        setInterval(update_volume_text, 1000*intervalSeconds);
+
+        socket.on('volume change', function(msg) {
+            update_volume_text(msg);
+        });
+
+        socket.on('power change', function(msg) {
+            update_power_text(msg);
+        });
     </script>
 
     <!-- <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script> -->

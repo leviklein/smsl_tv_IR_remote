@@ -74,8 +74,9 @@ async function process_volume_message(data) {
 
     console.log("TV volume: %s, amp_volume: %s", tv_volume, new_volume);
 
-    volume_change(delta)
-    set_data('volume', new_volume)
+    volume_change(delta);
+    set_data('volume', new_volume);
+    io.emit('volume change', new_volume);
   });
 }
 
@@ -105,7 +106,7 @@ async function process_power_message(data) {
     }
     else {
       if(tv_power_state != amp_power_state) {
-        power_change(!amp_power_state);
+        await power_change(!amp_power_state);
       }
     }
   });
@@ -116,6 +117,7 @@ async function power_change(power_state) {
   run_python_script(command_list);
   
   await set_data('powered_on', power_state);
+  io.emit('power change', power_state);
   
   if(power_state) {
     console.log('Powering on..')
@@ -202,10 +204,13 @@ setInterval(() => {
 
 
 
-const express = require('express')
+const express = require('express');
+const app = express();
+const http = require('http').createServer(app);
 const path = require('path');
 
-const app = express()
+const io = require('socket.io')(http);
+
 const port = 3000
 
 app.get('/api/volume', async (req, res) => {
@@ -230,7 +235,7 @@ app.get('/api/power/toggle', async (req, res) => {
   if(power) {
     console.log("Manually turning off amplifier");
     MANUAL_TURNOFF = true;
-    power_change(!power);
+    await power_change(!power);
   }
   res.sendStatus(204);
 });
@@ -240,23 +245,27 @@ app.get('/api/power', async (req, res) => {
   res.send(result.toString());
 });
 
-
-app.get('/api/power/on', (req, res) => {
-    power_change(true);
-    res.sendStatus(204);
-});
-
-app.get('/api/power/off', (req, res) => {
-  console.log("Manually turning off amplifier");
-  MANUAL_TURNOFF = true;
-  power_change(false);
+app.get('/api/power/on', async (req, res) => {
+  await set_data('powered_on', true);
+  io.emit('power change', true);
   res.sendStatus(204);
 });
 
-
+app.get('/api/power/off', async (req, res) => {
+  await set_data('powered_on', false);
+  io.emit('power change', false);
+  res.sendStatus(204);
+});
 
 app.use(express.static('html'))
 
-app.listen(port, () => {
+io.on('connection', async (socket) => {
+  console.log('a client connected');
+  socket.emit('power change', await get_data('powered_on'))
+  socket.emit('volume change', await get_data('volume'))
+});
+
+
+http.listen(port, () => {
   console.log(`App listening at http://localhost:${port}`)
 })
