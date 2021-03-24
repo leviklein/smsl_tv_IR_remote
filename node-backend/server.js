@@ -74,9 +74,13 @@ async function process_volume_message(data) {
 
     console.log("TV volume: %s, amp_volume: %s", tv_volume, new_volume);
 
-    volume_change(delta);
-    set_data('volume', new_volume);
-    io.emit('volume change', new_volume);
+    let is_on = await get_data('powered_on');
+
+    if (is_on) {
+      volume_change(delta);
+      set_data('volume', new_volume);
+      io.emit('volume change', new_volume);
+    }
   });
 }
 
