@@ -60,7 +60,8 @@ function process_tv_message(data) {
   else if (data.includes('SNAMUT')) {
     process_mute_message(data);
   }
-  else if (data.includes('SNPOWR') || data.includes('SAPOWR')) {
+  else if (!data.includes('FFFF') &&
+    (data.includes('SNPOWR') || data.includes('SAPOWR'))) {
     process_power_message(data);
   }
 }
@@ -72,13 +73,12 @@ async function process_volume_message(data) {
     let new_volume = Math.floor(tv_volume / 2);
     let delta = new_volume - db_volume;
 
-    console.log("TV volume: %s, amp_volume: %s", tv_volume, new_volume);
-
     let is_on = await get_data('powered_on');
 
     if (is_on) {
+      console.log("TV volume: %s, amp_volume: %s", tv_volume, new_volume);
       volume_change(delta);
-      set_data('volume', new_volume);
+      await set_data('volume', new_volume);
       io.emit('volume change', new_volume);
     }
   });
@@ -236,9 +236,14 @@ app.get('/api/volume/down', async (req, res) => {
 
 app.get('/api/power/toggle', async (req, res) => {
   let power = await get_data('powered_on');
-  if(power) {
+  if (power) {
     console.log("Manually turning off amplifier");
     MANUAL_TURNOFF = true;
+    await power_change(!power);
+  }
+  else if (MANUAL_TURNOFF) {
+    console.log("Manually turning on amplifier");
+    MANUAL_TURNOFF = false;
     await power_change(!power);
   }
   res.sendStatus(204);
