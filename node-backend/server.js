@@ -78,8 +78,8 @@ async function process_volume_message(data) {
     if (is_on) {
       console.log("TV volume: %s, amp_volume: %s", tv_volume, new_volume);
       volume_change(delta);
-      await set_data('volume', new_volume);
       io.emit('volume change', new_volume);
+      await set_data('volume', new_volume);
     }
   });
 }
@@ -120,8 +120,8 @@ async function power_change(power_state) {
   command_list = BASE_COMMAND.concat(["key_power"])
   run_python_script(command_list);
   
-  await set_data('powered_on', power_state);
   io.emit('power change', power_state);
+  await set_data('powered_on', power_state);
   
   if(power_state) {
     console.log('Powering on..')
