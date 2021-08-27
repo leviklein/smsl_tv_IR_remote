@@ -7,7 +7,7 @@ require('log-timestamp');
 const mutex = new Mutex();
 const python_mutex = new Mutex();
 
-const HOST = '192.168.20.241';
+const HOST = '192.168.2.31';
 const PORT = 20060;
 const PING_MSG = '*SEPOWR################\n';
 const BASE_COMMAND = ['-p', '--gap', '105', '-g', '17', '-f', '/etc/tv_smsl/smsl_ir_codes'];

@@ -8,7 +8,7 @@ import socket
 import subprocess
 import json
 
-HOST = '192.168.20.241'  # The server's hostname or IP address
+HOST = '192.168.2.31'  # The server's hostname or IP address
 PORT = 20060        # The port used by the server
 
 FILENAME = '/etc/tv_smsl/smsl_status.json'
