@@ -62,6 +62,16 @@ import argparse
 
 import pigpio # http://abyz.co.uk/rpi/pigpio/python.html
 
+import fcntl
+
+LOCKFILE = '/home/pi/.irrp.lock'
+
+f = open(LOCKFILE, "w")
+print("acquiring lock!")
+fcntl.lockf(f, fcntl.LOCK_EX)
+print("lock acquired!")
+
+
 p = argparse.ArgumentParser()
 
 g = p.add_mutually_exclusive_group(required=True)

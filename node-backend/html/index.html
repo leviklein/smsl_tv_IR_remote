@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+
+    <title>Hello, world!</title>
+  </head>
+  <!-- <style>
+      .circle {
+            height: 50px;
+            width: 50px;
+            background-color: #555;
+            border-radius: 50%;
+        }
+  </style> -->
+  <body>
+
+    <!-- <div class="row">
+        <div class="col"></div>
+        <div class="col"></div>
+        <div class="col"><h1>Remote Control</h1></div>
+        <div class="col"></div>
+        <div class="col"></div>
+    </div> -->
+
+    <div class="container">
+        <div class="row p-3">
+            <div class="col"><h1 class="text-center">SMSL Remote Control</h1></div>
+        </div>
+
+        <div class="row p-5"></div>
+
+        <div class="row align-items-center">
+            <div class="col">
+                <a class="btn btn-outline-danger btn-lg w-100 p-5" href="api/power/toggle">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10vw" height="10vw" fill="currentColor" class="bi bi-power" viewBox="0 0 16 16">
+                        <path d="M7.5 1v7h1V1h-1z"/>
+                        <path d="M3 8.812a4.999 4.999 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812z"/>
+                    </svg>
+                </a>
+            </div>
+            <div class="col">
+                <a class="btn btn-dark btn-lg w-100 p-5" href="api/volume/mute">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10vw" height="10vw" fill="currentColor" class="bi bi-volume-mute" viewBox="0 0 16 16">
+                        <path d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06zM6 5.04L4.312 6.39A.5.5 0 0 1 4 6.5H2v3h2a.5.5 0 0 1 .312.11L6 10.96V5.04zm7.854.606a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+
+        <div class="row p-3"></div>
+
+        <div class="row ">
+            <div class="col">
+                <a class="btn btn-dark btn-lg w-100 p-5" href="api/volume/down">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10vw" height="10vw" fill="currentColor" class="bi bi-volume-down" viewBox="0 0 16 16">
+                        <path d="M9 4a.5.5 0 0 0-.812-.39L5.825 5.5H3.5A.5.5 0 0 0 3 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 9 12V4zM6.312 6.39L8 5.04v5.92L6.312 9.61A.5.5 0 0 0 6 9.5H4v-3h2a.5.5 0 0 0 .312-.11zM12.025 8a4.486 4.486 0 0 1-1.318 3.182L10 10.475A3.489 3.489 0 0 0 11.025 8 3.49 3.49 0 0 0 10 5.525l.707-.707A4.486 4.486 0 0 1 12.025 8z"/>
+                    </svg>
+                </a>
+            </div>
+
+            <div class="col">
+                <a class="btn btn-dark btn-lg w-100 p-5 volume" href="api/volume/up">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10vw" height="10vw" fill="currentColor" class="bi bi-volume-up" viewBox="0 0 16 16">
+                        <path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303l.708.707z"/>
+                        <path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89l.706.706z"/>
+                        <path d="M10.025 8a4.486 4.486 0 0 1-1.318 3.182L8 10.475A3.489 3.489 0 0 0 9.025 8c0-.966-.392-1.841-1.025-2.475l.707-.707A4.486 4.486 0 0 1 10.025 8zM7 4a.5.5 0 0 0-.812-.39L3.825 5.5H1.5A.5.5 0 0 0 1 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 7 12V4zM4.312 6.39L6 5.04v5.92L4.312 9.61A.5.5 0 0 0 4 9.5H2v-3h2a.5.5 0 0 0 .312-.11z"/>
+                    </svg>
+                </a>
+            </div>
+
+        </div>
+
+        <div class="row p-3 justify-content-md-center">
+            <div class="col col-sm-3">
+                <p class="text-center power_message">Power state: </p>
+            </div>
+            <div class="col col-sm-3">
+                <p class="text-center volume_message">Volume level: </p>
+            </div>  
+    
+    
+        </div>
+
+    </div>
+
+
+
+
+    <!-- <nav>
+        <a class="btn btn-outline-danger btn-lg w-40 h-50 p-3" href="api/power/toggle">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-power" viewBox="0 0 16 16">
+                <path d="M7.5 1v7h1V1h-1z"/>
+                <path d="M3 8.812a4.999 4.999 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812z"/>
+            </svg>
+        </a>
+        <a class="btn btn-dark btn-lg w-40 h-50 p-3" href="api/volume/mute">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-volume-mute" viewBox="0 0 16 16">
+                <path d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06zM6 5.04L4.312 6.39A.5.5 0 0 1 4 6.5H2v3h2a.5.5 0 0 1 .312.11L6 10.96V5.04zm7.854.606a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0z"/>
+            </svg>
+        </a>
+        <a class="btn btn-dark btn-lg w-40 h-50 p-3" href="api/volume/down">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-volume-down" viewBox="0 0 16 16">
+                <path d="M9 4a.5.5 0 0 0-.812-.39L5.825 5.5H3.5A.5.5 0 0 0 3 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 9 12V4zM6.312 6.39L8 5.04v5.92L6.312 9.61A.5.5 0 0 0 6 9.5H4v-3h2a.5.5 0 0 0 .312-.11zM12.025 8a4.486 4.486 0 0 1-1.318 3.182L10 10.475A3.489 3.489 0 0 0 11.025 8 3.49 3.49 0 0 0 10 5.525l.707-.707A4.486 4.486 0 0 1 12.025 8z"/>
+            </svg>
+        </a>
+        <a class="btn btn-dark btn-lg w-40 h-50 p-3" href="api/volume/up">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-volume-up" viewBox="0 0 16 16">
+                <path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303l.708.707z"/>
+                <path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89l.706.706z"/>
+                <path d="M10.025 8a4.486 4.486 0 0 1-1.318 3.182L8 10.475A3.489 3.489 0 0 0 9.025 8c0-.966-.392-1.841-1.025-2.475l.707-.707A4.486 4.486 0 0 1 10.025 8zM7 4a.5.5 0 0 0-.812-.39L3.825 5.5H1.5A.5.5 0 0 0 1 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 7 12V4zM4.312 6.39L6 5.04v5.92L4.312 9.61A.5.5 0 0 0 4 9.5H2v-3h2a.5.5 0 0 0 .312-.11z"/>
+            </svg>
+        </a>
+
+
+    </nav> -->
+
+    <!-- <div class="container-fluid">
+        <h1>My First Bootstrap Page</h1>
+        <p>This is some text.</p>
+    </div> -->
+
+    <script>
+        var volume;
+        var power;
+
+        $( ".power_up" ).on("click", function () {
+            update_power_text();
+        });
+
+        $( ".volume" ).on("click", function () {
+            update_volume_text();
+        });
+
+    </script>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+
+        var volume;
+        var power; 
+        var intervalSeconds = 30;
+
+        function save_volume(val) {
+            volume = val
+        }
+
+        function save_power(val) {
+            val = val.toString();
+            if (val == 'true') 
+                power = 'ON';
+            else
+                power = 'OFF';
+        }
+
+        async function update_volume_text(val) {
+            if (val) {
+                save_volume(val)
+            }
+            else {
+                await $.get('api/volume').done( function(data) {
+                    save_volume(data)
+                });
+            }
+            console.log(volume);
+            $( ".volume_message" ).text(`Volume level: ${volume}`);
+        }
+
+        async function update_power_text(val) {
+            if (val) {
+                save_power(val);
+            }
+            else {
+                await $.get('api/power').done( function(data) {
+                    save_power(data);
+                });
+            }
+            console.log(power);
+            $( ".power_message" ).text(`Power state: ${power}`);
+        }
+        
+        update_volume_text();
+        update_power_text();
+
+        setInterval(update_power_text, 1000*intervalSeconds);
+        setInterval(update_volume_text, 1000*intervalSeconds);
+
+        socket.on('volume change', function(msg) {
+            update_volume_text(msg);
+        });
+
+        socket.on('power change', function(msg) {
+            update_power_text(msg);
+        });
+    </script>
+
+    <!-- <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
+
+  </body>
+</html>
