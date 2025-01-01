@@ -70,7 +70,7 @@ uint16_t sAddress = 0x3412;
 //uint16_t sAddress = 0x02;
 uint8_t sCommand = 0x2;
 //uint16_t sCommand = 0x34;
-uint8_t sRepeats = 4;
+uint8_t sRepeats = 1;
 
 void loop() {
     /*
@@ -132,4 +132,11 @@ void loop() {
     // }
 
     delay(1000);  // delay must be greater than 5 ms (RECORD_GAP_MICROS), otherwise the receiver sees it as one long signal
+
+    delay(2000);  // delay must be greater than 5 ms (RECORD_GAP_MICROS), otherwise the receiver sees it as one long signal
+
+    sendNEC(IR_SEND_PIN, sAddress, 0x6, sRepeats+1);
+    delay(1000);  // delay must be greater than 5 ms (RECORD_GAP_MICROS), otherwise the receiver sees it as one long signal
+
+
 }
