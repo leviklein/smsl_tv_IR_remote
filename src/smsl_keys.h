@@ -2,7 +2,7 @@
 #include <string>
 #include <utility> // For std::pair
 
-std::unordered_map<std::string, std::pair<uint16_t, uint16_t>> IR_CODES = {
+std::unordered_map<std::string, std::pair<uint16_t, uint8_t>> IR_CODES = {
     {"POWER",   { 0x3412, 0x1}},
     {"UP",      { 0x3412, 0x2}},
     {"LEFT",    { 0x3412, 0x3}},
