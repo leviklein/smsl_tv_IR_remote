@@ -27,8 +27,8 @@ enum COMMANDS {
 
 };
 
-MillisTimerLib timer1(200);
-MillisTimerLib timer2(500);
+MillisTimerLib timer1(200);       // fast blink
+MillisTimerLib timer2(500);       // short blink
 MillisTimerLib ping_timer(5000);
 MillisTimerLib poll_timer(5000);
 MillisTimerLib volume_timer(1000);
@@ -48,6 +48,7 @@ void setup() {
 
   // Write an integer
   preferences.getInt("volume");
+  preferences.getBool("muted");
 
   WiFi.mode(WIFI_STA);
   // Attempt to connect to Wi-Fi network
@@ -104,14 +105,14 @@ bool send_tv_api(const String& url, const String& body, JsonDocument& doc) {
     int httpCode = http.POST(body);
 
     if (httpCode > 0) {
-      Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+      // Serial.printf("[HTTP] POST... code: %d\n", httpCode);
       if (httpCode == HTTP_CODE_OK) {
         String payload = http.getString();
-        Serial.println("Payload:");
-        Serial.println(payload);
+        // Serial.println("Payload:");
+        // Serial.println(payload);
         if (parseBraviaResponse(payload, doc)) {
           // Example: Extracting a value (adapt to your specific response structure)
-          Serial.println("parse success");
+          // Serial.println("parse success");
           exitCode = 0;
         }
       }
@@ -162,7 +163,7 @@ std::pair<int, bool> get_tv_volume() {
           if (target.equals("speaker")) {
             int volume = data2["volume"];
             bool mute = data2["mute"];
-            Serial.printf("volume %d mute %d\n", volume, mute);
+            Serial.printf("correct! volume %d mute %d\n", volume, mute);
 
             return std::make_pair(volume, mute);
           }
@@ -172,13 +173,15 @@ std::pair<int, bool> get_tv_volume() {
   }
   return std::make_pair(-1, false);
 }
-bool sendIRcommand(std::string code, int repeats) {
+bool sendIRcommand(std::string code, uint8_t repeats) {
   Serial.printf("Sending code %s, %d times\n", code.c_str(), repeats);
+  Serial.printf("address: %d, code %d, repeats %d\n", IR_CODES[code].first, IR_CODES[code].second, repeats);
   Serial.flush();
-  sendNEC(IR_SEND_PIN, IR_CODES[code].first, IR_CODES[code].second, repeats, true);
+  sendNEC(IR_SEND_PIN, IR_CODES[code].first, IR_CODES[code].second, repeats, false);
   delay(1000);
   return 0;
 }
+
 
 bool processVolume(int volume) {
   if (volume == -1) {
@@ -187,7 +190,7 @@ bool processVolume(int volume) {
   Serial.println("processing volume");
   int storedVolume = preferences.getInt("volume");
   Serial.printf("volume %d saved_vol %d\n", volume, storedVolume);
-  int diff = volume - storedVolume;
+  int diff = (volume - storedVolume)/2;
   if (diff == 0) {
     return 0;
   }
@@ -198,10 +201,23 @@ bool processVolume(int volume) {
   else {
     command = "DOWN";
   }
-  int repeats;
-  abs(diff) > 1 ? repeats = abs(diff) : repeats = 1;
+  int repeats = abs(diff);
   preferences.putInt("volume", volume);
   sendIRcommand(command, repeats);
+  return 0;
+}
+
+bool processMute(bool mute) {
+  Serial.println("processing mute");
+  bool storedMute = preferences.getBool("muted");
+  if (storedMute == mute) {
+    return 0;
+  }
+  else {
+    sendIRcommand("MUTE", 1);
+    preferences.putBool("muted", mute);
+
+  }
   return 0;
 }
 
@@ -227,6 +243,10 @@ void loop() {
 
       if(!check_wifi() && !ping_tv()) {
         check_tv_on();
+        if (STATE == TV_ON) {
+          sendIRcommand("POWER",  1);
+          delay(2000);
+        }
       }
       else {
         Serial.print("TV off ???? \n");
@@ -237,7 +257,6 @@ void loop() {
       ping_tv();
       if (timer1.timer()) {
         digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-        Serial.print("TV not pingable!!! \n");
       }
       break;
     }
@@ -246,11 +265,13 @@ void loop() {
       if(!check_wifi() && !ping_tv() && !check_tv_on()) {
         std::pair<int, bool> result = get_tv_volume();
         processVolume(result.first);
-        if (result.second) {
-          sendIRcommand("MUTE", 1);
-        }
+        processMute(result.second);
       }
       else {
+      }
+      if (STATE == TV_OFF) {
+          sendIRcommand("POWER",  1);
+          delay(2000);
       }
       break;
     }
