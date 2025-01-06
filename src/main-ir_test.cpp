@@ -1,142 +1,253 @@
 /*
- * TinySender.cpp
+ *  ReceiverTimingAnalysis.cpp
  *
- *  Example for sending using TinyIR. By default sends simultaneously using all supported protocols
- *  To use a single protocol, simply delete or comment out all unneeded protocols in the main loop
- *  Program size is significantly reduced when using a single protocol
- *  For example, sending only 8 bit address and command NEC codes saves 780 bytes program memory and 26 bytes RAM compared to SimpleSender,
- *  which does the same, but uses the IRRemote library (and is therefore much more flexible).
+ *  This program enables the pin change interrupt at pin 3 and waits for NEC (or other Pulse-Distance-Coding) IR Signal.
+ *  It measures the pulse and pause times of the incoming signal and computes some statistics for it.
+ *
+ *  Observed values:
+ *  Delta of each signal type is around 50 up to 100 and at low signals up to 200. TSOP is better, especially at low IR signal level.
+ *  VS1838      Mark Excess -50 to +50 us
+ *  TSOP31238   Mark Excess 0 to +50
  *
  *
- * The FAST protocol is a proprietary modified JVC protocol without address, with parity and with a shorter header.
- *  FAST Protocol characteristics:
- * - Bit timing is like NEC or JVC
- * - The header is shorter, 3156 vs. 12500
- * - No address and 16 bit data, interpreted as 8 bit command and 8 bit inverted command,
- *     leading to a fixed protocol length of (6 + (16 * 3) + 1) * 526 = 55 * 526 = 28930 microseconds or 29 ms.
- * - Repeats are sent as complete frames but in a 50 ms period / with a 21 ms distance.
- *
+ *  Copyright (C) 2019-2020  Armin Joachimsmeyer
+ *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of IRMP https://github.com/IRMP-org/IRMP.
  *  This file is part of Arduino-IRremote https://github.com/Arduino-IRremote/Arduino-IRremote.
  *
- ************************************************************************************
- * MIT License
+ *  IRMP is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
  *
- * Copyright (c) 2022-2024 Armin Joachimsmeyer
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU General Public License for more details.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is furnished
- * to do so, subject to the following conditions:
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
- * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
- * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
- * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************************
  */
+
 #include <Arduino.h>
 
-#include "secrets.h" // Set IR_SEND_PIN for different CPU's
+#include "secrets.h"
+//#define IR_RECEIVE_PIN    3
 
-#include "TinyIRSender.hpp"
+/*
+ * Helper macro for getting a macro definition as string
+ */
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
+#if !(defined(EICRA) && defined(EIFR) && defined(EIMSK))
+void measureTimingISR(void);
+#endif
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
 
     Serial.begin(115200);
-
+#if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) /*stm32duino*/|| defined(USBCON) /*STM32_stm32*/ \
+    || defined(SERIALUSB_PID)  || defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_attiny3217)
+    // Wait until Serial Monitor is attached.
+    // Required for boards using USB code for Serial like Leonardo.
+    // Is void for USB Serial implementations using external chips e.g. a CH340.
+    while (!Serial)
+        ;
+    // !!! Program will not proceed if no Serial Monitor is attached !!!
+#endif
     // Just to know which program is running on my Arduino
-    Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_TINYIR));
-    Serial.print(F("Send IR signals at pin "));
-    Serial.println(IR_SEND_PIN);
+    Serial.println(F("START " __FILE__ " from " __DATE__));
+
+#if defined(EICRA) && defined(EIFR) && defined(EIMSK)
+#  if (IR_RECEIVE_PIN == 2)
+    EICRA |= _BV(ISC00);  // interrupt on any logical change
+    EIFR |= _BV(INTF0);     // clear interrupt bit
+    EIMSK |= _BV(INT0);     // enable interrupt on next change
+#  elif (IR_RECEIVE_PIN == 3)
+    EICRA |= _BV(ISC10);    // enable interrupt on pin3 on both edges for ATmega328
+    EIFR |= _BV(INTF1);     // clear interrupt bit
+    EIMSK |= _BV(INT1);     // enable interrupt on next change
+#  endif
+#else
+#  if defined(ARDUINO_ARCH_SAMD) // see https://www.arduino.cc/reference/tr/language/functions/external-interrupts/attachinterrupt/ paragraph: Syntax
+    attachInterrupt(IR_RECEIVE_PIN, measureTimingISR, CHANGE);
+#  else
+    attachInterrupt(digitalPinToInterrupt(IR_RECEIVE_PIN), measureTimingISR, CHANGE);
+#  endif
+#endif
+    Serial.println(F("Ready to analyze NEC IR signal at pin " STR(IR_RECEIVE_PIN)));
+    Serial.println();
+}
+
+uint8_t ISREdgeCounter = 0;
+volatile uint32_t LastMicros;
+struct timingStruct {
+    uint16_t minimum;
+    uint8_t indexOfMinimum;
+    uint16_t maximum;
+    uint8_t indexOfMaximum;
+    uint16_t average;
+
+    uint16_t SumForAverage;
+    uint8_t SampleCount;
+//    uint8_t LastPrintedCount;
+};
+
+struct timingStruct Mark;
+struct timingStruct ShortSpace;
+struct timingStruct LongSpace;
+
+/*
+ * Compute minimum, maximum and average
+ */
+void processTmingValue(struct timingStruct *aTimingStruct, uint16_t aValue) {
+    if (aTimingStruct->SampleCount == 0) {
+        // initialize values
+        aTimingStruct->minimum = UINT16_MAX;
+        aTimingStruct->maximum = 0;
+        aTimingStruct->SumForAverage = 0;
+    }
+
+    if (aTimingStruct->minimum > aValue) {
+        aTimingStruct->minimum = aValue;
+        aTimingStruct->indexOfMinimum = aTimingStruct->SampleCount;
+    }
+    if (aTimingStruct->maximum < aValue) {
+        aTimingStruct->maximum = aValue;
+        aTimingStruct->indexOfMaximum = aTimingStruct->SampleCount;
+    }
+
+    aTimingStruct->SampleCount++;
+    aTimingStruct->SumForAverage += aValue;
+    aTimingStruct->average = (aTimingStruct->SumForAverage + (aTimingStruct->SampleCount / 2)) / aTimingStruct->SampleCount;
+
+}
+
+void printTimingValues(struct timingStruct *aTimingStruct, const char *aCaption) {
+//    if (aTimingStruct->LastPrintedCount != aTimingStruct->SampleCount)
+//    {
+//        aTimingStruct->LastPrintedCount = aTimingStruct->SampleCount;
+    Serial.print(aCaption);
+    Serial.print(F(": SampleCount="));
+    Serial.print(aTimingStruct->SampleCount);
+    Serial.print(F(" Minimum="));
+    Serial.print(aTimingStruct->minimum);
+    Serial.print(F(" @"));
+    Serial.print(aTimingStruct->indexOfMinimum);
+    Serial.print(F(" Maximum="));
+    Serial.print(aTimingStruct->maximum);
+    Serial.print(F(" @"));
+    Serial.print(aTimingStruct->indexOfMaximum);
+    Serial.print(F(" Delta="));
+    Serial.print(aTimingStruct->maximum - aTimingStruct->minimum);
+    Serial.print(F("   Average="));
+    Serial.print(aTimingStruct->average);
+
+    Serial.println();
+//    }
+}
+
+void loop() {
+    if (Mark.SampleCount >= 32) {
+        /*
+         * This check enables statistics for longer protocols like Kaseikyo/Panasonics
+         */
+#if !defined(ARDUINO_ARCH_MBED)
+        noInterrupts();
+#endif
+        uint32_t tLastMicros = LastMicros;
+#if !defined(ARDUINO_ARCH_MBED)
+        interrupts();
+#endif
+        uint32_t tMicrosDelta = micros() - tLastMicros;
+
+        if (tMicrosDelta > 10000) {
+            // NEC signal ended just now
+            Serial.println();
+            printTimingValues(&Mark, "Mark      ");
+            printTimingValues(&ShortSpace, "ShortSpace");
+            printTimingValues(&LongSpace, "LongSpace ");
+
+            /*
+             * Print analysis of mark and short spaces
+             */
+            Serial.println(F("Analysis  :"));
+            Serial.print(F(" (Average of mark + short space)/2 = "));
+            int16_t MarkAndShortSpaceAverage = (Mark.average + ShortSpace.average) / 2;
+            Serial.print(MarkAndShortSpaceAverage);
+            Serial.print(F(" us\r\n Delta (to NEC standard 560) = "));
+            Serial.print(MarkAndShortSpaceAverage - 560);
+            Serial.print(F("us\r\n MARK_EXCESS_MICROS = (Average of mark - Average of mark and short space) = "));
+            Serial.print((int16_t) Mark.average - MarkAndShortSpaceAverage);
+            Serial.print(F("us"));
+            Serial.println();
+            Serial.println();
+
+            Mark.SampleCount = 0; // used as flag for not printing the results more than once
+        }
+    }
 }
 
 /*
- * Set up the data to be sent.
- * The compiler is intelligent and removes the code for 16 bit address handling if we call it with an uint8_t address :-).
- * Using an uint16_t address or data requires additional 28 bytes program memory for NEC and 56 bytes program memory for FAST.
+ * The interrupt handler.
+ * Just add to the appropriate timing structure.
  */
-uint16_t sAddress = 0x3412;
-//uint16_t sAddress = 0x02;
-uint8_t sCommand = 0x2;
-//uint16_t sCommand = 0x34;
-uint8_t sRepeats = 1;
-
-void loop() {
+#if defined(ESP8266) || defined(ESP32)
+void IRAM_ATTR measureTimingISR()
+#else
+#  if defined(EICRA) && defined(EIFR) && defined(EIMSK)
+#    if (IR_RECEIVE_PIN == 2)
+ISR(INT0_vect)
+#    elif (IR_RECEIVE_PIN == 3)
+ISR(INT1_vect)
+#    endif
+#  else
+void measureTimingISR()
+#  endif
+#endif
+{
+    uint32_t tMicros = micros();
+    uint32_t tMicrosDelta = tMicros - LastMicros;
+    LastMicros = tMicros;
     /*
-     * Print current send values
+     * read level and give feedback
      */
-    Serial.println();
-    Serial.print(F("Send now:"));
-    Serial.print(F(" address=0x"));
-    Serial.print(sAddress, HEX);
-    Serial.print(F(" command=0x"));
-    Serial.print(sCommand, HEX);
-    Serial.print(F(" repeats="));
-    Serial.print(sRepeats);
-    Serial.println();
+    uint8_t tInputLevel = digitalRead(IR_RECEIVE_PIN);
+    digitalWrite(LED_BUILTIN, !tInputLevel);
 
-    // // Send with FAST
-    // // No address and only 16 bits of data, interpreted as 8 bit command and 8 bit inverted command for parity checking
-    // Serial.println(F("Send FAST with 8 bit command"));
-    // Serial.flush();
-    // sendFAST(IR_SEND_PIN, sCommand, sRepeats);
+    if (tMicrosDelta > 10000) {
+        // gap > 10 ms detected, reset counter to first detected edge and initialize timing structures
+        ISREdgeCounter = 1;
+        LongSpace.SampleCount = 0;
+        ShortSpace.SampleCount = 0;
+        Mark.SampleCount = 0;
+    } else {
+        ISREdgeCounter++;
+    }
 
-    // Send with NEC
-    // NEC uses 8 bit address and 8 bit command each with 8 bit inverted parity checks
-    // However, sendNEC will accept 16 bit address and commands too (but remove the parity checks)
-    Serial.println(F("Send NEC with 8 bit address and command"));
-    Serial.flush();
-    sendNEC(IR_SEND_PIN, sAddress, sCommand, sRepeats);
-
-    // // Send with Extended NEC
-    // // Like NEC, but the address is forced 16 bits with no parity check
-    // Serial.println(F("Send ExtendedNEC with 16 bit address and  8 bit command"));
-    // Serial.flush();
-    // sendExtendedNEC(IR_SEND_PIN, sAddress, sCommand, sRepeats);
-
-    // // Send with ONKYO
-    // // Like NEC, but both the address and command are forced 16 bits with no parity check
-    // Serial.println(F("Send ONKYO with 16 bit address and command"));
-    // Serial.flush();
-    // sendONKYO(IR_SEND_PIN, sAddress, sCommand, sRepeats);
-
-    // // Send with NEC2
-    // // Instead of sending the NEC special repeat code, sends the full original frame for repeats
-    // // Sending NEC2 is done by setting the optional bool NEC2Repeats argument to true (defaults to false)
-    // // sendExtendedNEC and sendONKYO also support the NEC2Repeats argument for full frame repeats (not demonstrated here)
-    // Serial.println(F("Send NEC2 with 8 bit address and command and original frame repeats"));
-    // Serial.flush();
-    // sendNEC(IR_SEND_PIN, sAddress, sCommand, sRepeats, true);
-
-    // /*
-    //  * Increment send values
-    //  * Also increment address just for demonstration, which normally makes no sense
-    //  */
-    // sAddress += 0x0101;
-    // sCommand += 0x11;
-    // sRepeats++;
-    // // clip repeats at 4
-    // if (sRepeats > 4) {
-    //     sRepeats = 4;
-    // }
-
-    delay(1000);  // delay must be greater than 5 ms (RECORD_GAP_MICROS), otherwise the receiver sees it as one long signal
-
-    delay(2000);  // delay must be greater than 5 ms (RECORD_GAP_MICROS), otherwise the receiver sees it as one long signal
-
-    sendNEC(IR_SEND_PIN, sAddress, 0x6, sRepeats+1);
-    delay(1000);  // delay must be greater than 5 ms (RECORD_GAP_MICROS), otherwise the receiver sees it as one long signal
-
-
+    /*
+     * Skip header mark and space and first bit mark and space
+     */
+    if (ISREdgeCounter > 4) {
+        if (tInputLevel != LOW) {
+            // Mark ended
+            processTmingValue(&Mark, tMicrosDelta);
+//            Serial.print('M');
+        } else {
+            // Space ended
+            if (tMicrosDelta > 1000) {
+                // long space - logical 1
+                processTmingValue(&LongSpace, tMicrosDelta);
+                Serial.print('1');
+            } else {
+                // short space - logical 0
+                processTmingValue(&ShortSpace, tMicrosDelta);
+                Serial.print('0');
+            }
+        }
+    }
 }

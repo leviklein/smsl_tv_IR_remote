@@ -1,3 +1,3 @@
-const char* ssid = "";
-const char* password = "";
-const IPAddress tv_ip(8, 8, 8, 8);
+#define LED_BUILTIN 2
+#define IR_SEND_PIN 16
+#define IR_RECEIVE_PIN 4
