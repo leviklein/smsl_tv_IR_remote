@@ -27,15 +27,14 @@ enum COMMANDS {
 
 };
 
-MillisTimerLib timer1(200);       // fast blink
+MillisTimerLib timer1(100);       // fast blink
 MillisTimerLib timer2(500);       // short blink
 MillisTimerLib ping_timer(5000);
 MillisTimerLib poll_timer(5000);
-MillisTimerLib volume_timer(1000);
+MillisTimerLib volume_timer(1500);
 
 int STATE =  WIFI_NOT_CONNECTED;
-
-// put function declarations here:
+int ping_fail = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -47,8 +46,8 @@ void setup() {
   preferences.begin("ir-remote", false); // "my-app" is the namespace, false means read/write
 
   // Write an integer
-  preferences.getInt("volume");
-  preferences.getBool("muted");
+  VOLUME = preferences.getInt("volume");
+  MUTED = preferences.getBool("muted");
 
   WiFi.mode(WIFI_STA);
   // Attempt to connect to Wi-Fi network
@@ -70,12 +69,23 @@ bool check_wifi() {
   return 0;
 }
 
-bool ping_tv() {
+int ping_tv() {
   if (ping_timer.timer()) {
     if (!Ping.ping(tv_ip, 1)) {
-      Serial.println("TV not pingable!");
-      STATE = TV_NOT_PINGABLE;
-      return 1;
+      ping_fail += 1;
+      if (ping_fail == 3) {
+        Serial.println("TV not pingable!");
+        STATE = TV_NOT_PINGABLE;
+        ping_fail = 0;
+        return 1;
+      }
+      else {
+        return 3;
+      }
+    }
+    else {
+      ping_fail = 0;
+      return 2;
     }
 
     // Serial.println("TV pingable!!!");
@@ -143,7 +153,6 @@ bool check_tv_on() {
       }
     }
     else {
-      STATE = TV_OFF;
       return 1;
     }
   }
@@ -177,8 +186,11 @@ bool sendIRcommand(std::string code, uint8_t repeats) {
   Serial.printf("Sending code %s, %d times\n", code.c_str(), repeats);
   Serial.printf("address: %d, code %d, repeats %d\n", IR_CODES[code].first, IR_CODES[code].second, repeats);
   Serial.flush();
-  sendNEC(IR_SEND_PIN, IR_CODES[code].first, IR_CODES[code].second, repeats, false);
-  delay(1000);
+
+  for (int i = 0; i < repeats; i++) {
+    sendNEC(IR_SEND_PIN, IR_CODES[code].first, IR_CODES[code].second, 1, false);
+    delay(20);
+  }
   return 0;
 }
 
@@ -207,16 +219,15 @@ bool processVolume(int volume) {
   return 0;
 }
 
-bool processMute(bool mute) {
-  Serial.println("processing mute");
+bool processMute(bool muted) {
   bool storedMute = preferences.getBool("muted");
-  if (storedMute == mute) {
+  if (storedMute == muted) {
     return 0;
   }
   else {
+    Serial.println("processing mute");
     sendIRcommand("MUTE", 1);
-    preferences.putBool("muted", mute);
-
+    preferences.putBool("muted", muted);
   }
   return 0;
 }
@@ -227,7 +238,7 @@ void loop() {
       Serial.print(".");
       if (timer2.timer()) {
         digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-        Serial.print("Blink!!! \n");
+        // Serial.print("Blink!!! \n");
 
       }
       if (WiFi.status() == WL_CONNECTED) {
@@ -243,7 +254,7 @@ void loop() {
 
       if(!check_wifi() && !ping_tv()) {
         check_tv_on();
-        if (STATE == TV_ON) {
+        if (STATE == TV_ON) { // TV turned on
           sendIRcommand("POWER",  1);
           delay(2000);
         }
@@ -254,9 +265,11 @@ void loop() {
       break;
     }
     case TV_NOT_PINGABLE: {
-      ping_tv();
       if (timer1.timer()) {
         digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+      }
+      if(ping_tv() == 2) {
+        STATE = TV_ON;
       }
       break;
     }
@@ -264,12 +277,15 @@ void loop() {
       digitalWrite(LED_BUILTIN, HIGH);
       if(!check_wifi() && !ping_tv() && !check_tv_on()) {
         std::pair<int, bool> result = get_tv_volume();
-        processVolume(result.first);
-        processMute(result.second);
+        if (result.first != -1 ) {
+          Serial.printf("%d first, %d second \n", result.first, result.second);
+          processVolume(result.first);
+          processMute(result.second);
+        }
       }
       else {
       }
-      if (STATE == TV_OFF) {
+      if (STATE == TV_OFF) { // TV turned off
           sendIRcommand("POWER",  1);
           delay(2000);
       }
